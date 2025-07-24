@@ -5,9 +5,9 @@ WORKDIR /app
 # Install required system packages
 RUN apk add --no-cache gcc musl-dev git
 
-# Copy go mod files
+# Copy go mod files and vendor directory
 COPY go.mod go.sum ./
-RUN go mod download
+COPY vendor/ vendor/
 
 # Copy source code
 COPY . .
@@ -24,11 +24,11 @@ WORKDIR /app
 RUN apk add --no-cache ca-certificates
 
 # Copy binary from builder
-COPY --from=builder /app/main .
+COPY --from=builder /go/bin/app .
 COPY --from=builder /app/.env .
 
 # Expose port
 EXPOSE 8080
 
 # Run the application
-CMD ["./main"] 
+CMD ["./app"] 
