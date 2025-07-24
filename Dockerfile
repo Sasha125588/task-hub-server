@@ -3,7 +3,7 @@ FROM golang:1.24.3-alpine AS builder
 WORKDIR /app
 
 # Install required system packages
-RUN apk add --no-cache gcc musl-dev
+RUN apk add --no-cache gcc musl-dev git
 
 # Copy go mod files
 COPY go.mod go.sum ./
@@ -13,7 +13,7 @@ RUN go mod download
 COPY . .
 
 # Build the application
-RUN CGO_ENABLED=1 GOOS=linux go build -o main ./cmd/app/main.go
+RUN go build -mod=vendor -o /go/bin/app ./cmd/app
 
 # Final stage
 FROM alpine:latest
