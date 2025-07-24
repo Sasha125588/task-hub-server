@@ -13,7 +13,7 @@ COPY vendor/ vendor/
 COPY . .
 
 # Build the application
-RUN go build -mod=vendor -o /go/bin/app ./cmd/app
+RUN go build -mod=vendor -o app ./cmd/app
 
 # Final stage
 FROM alpine:latest
@@ -24,7 +24,7 @@ WORKDIR /app
 RUN apk add --no-cache ca-certificates
 
 # Copy binary from builder
-COPY --from=builder /go/bin/app .
+COPY --from=builder /app/app .
 COPY --from=builder /app/.env .
 
 # Expose port
