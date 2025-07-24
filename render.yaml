@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: task-hub-api
+    env: docker
+    region: frankfurt # или выберите другой регион
+    plan: free # или выберите другой план
+    healthCheckPath: /health
+    envVars:
+      - key: PORT
+        value: 8080
+      - key: DATABASE_URL
+        sync: false # Это означает, что значение нужно будет установить в Render dashboard
+      - key: ALLOWED_ORIGINS
+        sync: false

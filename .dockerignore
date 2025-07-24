@@ -1,0 +1,8 @@
+.git
+.gitignore
+.env
+*.md
+tmp/
+docs/
+test_connection.go
+identifier.sqlite 

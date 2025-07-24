@@ -1,0 +1,477 @@
+basePath: /api/v1
+definitions:
+  models.CreateSubTaskRequest:
+    properties:
+      description:
+        type: string
+      status:
+        $ref: '#/definitions/models.TaskStatus'
+      title:
+        type: string
+    required:
+    - status
+    - title
+    type: object
+  models.CreateTaskRequest:
+    properties:
+      due_date:
+        type: string
+      end_time:
+        type: string
+      icon_name:
+        type: string
+      start_time:
+        type: string
+      status:
+        $ref: '#/definitions/models.TaskStatus'
+      title:
+        type: string
+      user_ids:
+        items:
+          type: string
+        type: array
+    required:
+    - due_date
+    - icon_name
+    - status
+    - title
+    type: object
+  models.ErrorResponse:
+    properties:
+      error:
+        example: error message
+        type: string
+    type: object
+  models.MessageResponse:
+    properties:
+      message:
+        example: operation completed successfully
+        type: string
+    type: object
+  models.SubTask:
+    properties:
+      created_at:
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      status:
+        $ref: '#/definitions/models.TaskStatus'
+      task_id:
+        type: string
+      title:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  models.SubTasksResponse:
+    properties:
+      subtasks:
+        items:
+          $ref: '#/definitions/models.SubTask'
+        type: array
+    type: object
+  models.Task:
+    properties:
+      attachments:
+        type: integer
+      comments:
+        type: integer
+      created_at:
+        type: string
+      due_date:
+        type: string
+      end_time:
+        type: string
+      icon_name:
+        type: string
+      id:
+        type: string
+      links:
+        type: integer
+      progress:
+        type: integer
+      start_time:
+        type: string
+      status:
+        $ref: '#/definitions/models.TaskStatus'
+      sub_tasks:
+        items:
+          $ref: '#/definitions/models.SubTask'
+        type: array
+      title:
+        type: string
+      updated_at:
+        type: string
+      users:
+        items:
+          $ref: '#/definitions/models.User'
+        type: array
+    type: object
+  models.TaskStatus:
+    enum:
+    - not-started
+    - completed
+    - in-progress
+    type: string
+    x-enum-varnames:
+    - StatusNotStarted
+    - StatusCompleted
+    - StatusInProgress
+  models.TasksResponse:
+    properties:
+      tasks:
+        items:
+          $ref: '#/definitions/models.Task'
+        type: array
+    type: object
+  models.UpdateSubTaskRequest:
+    properties:
+      description:
+        type: string
+      status:
+        $ref: '#/definitions/models.TaskStatus'
+      title:
+        type: string
+    type: object
+  models.UpdateTaskRequest:
+    properties:
+      attachments:
+        type: integer
+      comments:
+        type: integer
+      due_date:
+        type: string
+      end_time:
+        type: string
+      icon_name:
+        type: string
+      links:
+        type: integer
+      progress:
+        type: integer
+      start_time:
+        type: string
+      status:
+        $ref: '#/definitions/models.TaskStatus'
+      title:
+        type: string
+    type: object
+  models.User:
+    properties:
+      id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      name:
+        example: John Doe
+        type: string
+      src:
+        example: https://avatars.githubusercontent.com/u/124599?v=4
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact:
+    email: support@swagger.io
+    name: API Support
+    url: http://www.swagger.io/support
+  description: This is a task management server.
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  termsOfService: http://swagger.io/terms/
+  title: Task Hub API
+  version: "1.0"
+paths:
+  /subtasks/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete an existing subtask
+      parameters:
+      - description: Subtask ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.MessageResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Delete a subtask
+      tags:
+      - subtasks
+    put:
+      consumes:
+      - application/json
+      description: Update an existing subtask's details
+      parameters:
+      - description: Subtask ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Updated subtask details
+        in: body
+        name: subtask
+        required: true
+        schema:
+          $ref: '#/definitions/models.UpdateSubTaskRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.SubTask'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Update a subtask
+      tags:
+      - subtasks
+  /tasks:
+    get:
+      consumes:
+      - application/json
+      description: Get all tasks with optional filtering
+      parameters:
+      - description: Filter by status
+        in: query
+        name: status
+        type: string
+      - description: Filter by priority
+        in: query
+        name: priority
+        type: string
+      - description: 'Limit number of tasks returned (default: 50)'
+        in: query
+        name: limit
+        type: integer
+      - description: Offset for pagination
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.TasksResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Get all tasks
+      tags:
+      - tasks
+    post:
+      consumes:
+      - application/json
+      description: Create a new task with the provided details
+      parameters:
+      - description: Task details
+        in: body
+        name: task
+        required: true
+        schema:
+          $ref: '#/definitions/models.CreateTaskRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.Task'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Create a new task
+      tags:
+      - tasks
+  /tasks/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete an existing task
+      parameters:
+      - description: Task ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.MessageResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Delete a task
+      tags:
+      - tasks
+    get:
+      consumes:
+      - application/json
+      description: Get detailed information about a specific task
+      parameters:
+      - description: Task ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Task'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Get a task by ID
+      tags:
+      - tasks
+    put:
+      consumes:
+      - application/json
+      description: Update an existing task's details
+      parameters:
+      - description: Task ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Updated task details
+        in: body
+        name: task
+        required: true
+        schema:
+          $ref: '#/definitions/models.UpdateTaskRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Task'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Update a task
+      tags:
+      - tasks
+  /tasks/{id}/subtasks:
+    get:
+      consumes:
+      - application/json
+      description: Get all subtasks for a specific task
+      parameters:
+      - description: Task ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.SubTasksResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Get task's subtasks
+      tags:
+      - subtasks
+    post:
+      consumes:
+      - application/json
+      description: Create a new subtask for a specific task
+      parameters:
+      - description: Task ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Subtask details
+        in: body
+        name: subtask
+        required: true
+        schema:
+          $ref: '#/definitions/models.CreateSubTaskRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.SubTask'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Create a subtask
+      tags:
+      - subtasks
+swagger: "2.0"
