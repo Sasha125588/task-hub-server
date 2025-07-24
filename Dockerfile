@@ -5,15 +5,21 @@ WORKDIR /app
 # Install required system packages
 RUN apk add --no-cache gcc musl-dev git
 
-# Copy go mod files and vendor directory
+# Install swag
+RUN go install github.com/swaggo/swag/cmd/swag@latest
+
+# Copy go mod files
 COPY go.mod go.sum ./
-COPY vendor/ vendor/
+RUN go mod download
 
 # Copy source code
 COPY . .
 
+# Generate Swagger documentation
+RUN swag init -g cmd/app/main.go
+
 # Build the application
-RUN go build -mod=vendor -o app ./cmd/app
+RUN go build -o app ./cmd/app
 
 # Final stage
 FROM alpine:latest
@@ -25,7 +31,6 @@ RUN apk add --no-cache ca-certificates
 
 # Copy binary from builder
 COPY --from=builder /app/app .
-COPY --from=builder /app/.env .
 
 # Expose port
 EXPOSE 8080
