@@ -18,26 +18,51 @@ func NewSubTaskRepository(db *sql.DB) *SubTaskRepository {
 }
 
 func (r *SubTaskRepository) CreateSubTask(subTask *models.SubTask) error {
+	// Get the maximum order for the task
+	var maxOrder int
+	err := r.db.QueryRow("SELECT COALESCE(MAX(\"order\"), -1) FROM sub_tasks WHERE task_id = $1", subTask.TaskID).Scan(&maxOrder)
+	if err != nil {
+		return err
+	}
+
+	// Set the new subtask's order to be last
+	subTask.Order = maxOrder + 1
+
 	query := `
-		INSERT INTO sub_tasks (id, task_id, title, description, status, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
-	`
-	_, err := r.db.Exec(query, subTask.ID, subTask.TaskID, subTask.Title,
-		subTask.Description, subTask.Status, subTask.CreatedAt, subTask.UpdatedAt)
-	return err
+		INSERT INTO sub_tasks (id, task_id, title, description, status, "order", created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		RETURNING id`
+
+	return r.db.QueryRow(
+		query,
+		subTask.ID,
+		subTask.TaskID,
+		subTask.Title,
+		subTask.Description,
+		subTask.Status,
+		subTask.Order,
+		subTask.CreatedAt,
+		subTask.UpdatedAt,
+	).Scan(&subTask.ID)
 }
 
 func (r *SubTaskRepository) GetSubTaskByID(id string) (*models.SubTask, error) {
 	query := `
-		SELECT id, task_id, title, description, status, created_at, updated_at
+		SELECT id, task_id, title, description, status, "order", created_at, updated_at
 		FROM sub_tasks WHERE id = $1
 	`
 	subTask := &models.SubTask{}
 	row := r.db.QueryRow(query, id)
 
 	err := row.Scan(
-		&subTask.ID, &subTask.TaskID, &subTask.Title, &subTask.Description,
-		&subTask.Status, &subTask.CreatedAt, &subTask.UpdatedAt,
+		&subTask.ID,
+		&subTask.TaskID,
+		&subTask.Title,
+		&subTask.Description,
+		&subTask.Status,
+		&subTask.Order,
+		&subTask.CreatedAt,
+		&subTask.UpdatedAt,
 	)
 
 	if err != nil {
@@ -91,9 +116,11 @@ func (r *SubTaskRepository) DeleteSubTask(id string) error {
 
 func (r *SubTaskRepository) GetSubTasksByTaskID(taskID string) ([]models.SubTask, error) {
 	query := `
-		SELECT id, task_id, title, description, status, created_at, updated_at
-		FROM sub_tasks WHERE task_id = $1 ORDER BY created_at ASC
-	`
+		SELECT id, task_id, title, description, status, "order", created_at, updated_at
+		FROM sub_tasks
+		WHERE task_id = $1
+		ORDER BY "order" ASC`
+
 	rows, err := r.db.Query(query, taskID)
 	if err != nil {
 		return nil, err
@@ -104,8 +131,14 @@ func (r *SubTaskRepository) GetSubTasksByTaskID(taskID string) ([]models.SubTask
 	for rows.Next() {
 		var subTask models.SubTask
 		err := rows.Scan(
-			&subTask.ID, &subTask.TaskID, &subTask.Title, &subTask.Description,
-			&subTask.Status, &subTask.CreatedAt, &subTask.UpdatedAt,
+			&subTask.ID,
+			&subTask.TaskID,
+			&subTask.Title,
+			&subTask.Description,
+			&subTask.Status,
+			&subTask.Order,
+			&subTask.CreatedAt,
+			&subTask.UpdatedAt,
 		)
 		if err != nil {
 			return nil, err
@@ -114,4 +147,53 @@ func (r *SubTaskRepository) GetSubTasksByTaskID(taskID string) ([]models.SubTask
 	}
 
 	return subTasks, nil
+}
+
+// ReorderSubTask updates the order of a subtask and adjusts other subtasks' orders accordingly
+func (r *SubTaskRepository) ReorderSubTask(taskID string, subTaskID string, newOrder int) error {
+	tx, err := r.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	// Get current order of the subtask
+	var currentOrder int
+	err = tx.QueryRow("SELECT \"order\" FROM sub_tasks WHERE id = $1 AND task_id = $2", subTaskID, taskID).Scan(&currentOrder)
+	if err != nil {
+		return err
+	}
+
+	if currentOrder < newOrder {
+		// Moving down: decrease order of tasks between current and new position
+		_, err = tx.Exec(`
+			UPDATE sub_tasks 
+			SET "order" = "order" - 1 
+			WHERE task_id = $1 
+			AND "order" > $2 
+			AND "order" <= $3
+			AND id != $4`,
+			taskID, currentOrder, newOrder, subTaskID)
+	} else {
+		// Moving up: increase order of tasks between new and current position
+		_, err = tx.Exec(`
+			UPDATE sub_tasks 
+			SET "order" = "order" + 1 
+			WHERE task_id = $1 
+			AND "order" >= $2 
+			AND "order" < $3
+			AND id != $4`,
+			taskID, newOrder, currentOrder, subTaskID)
+	}
+	if err != nil {
+		return err
+	}
+
+	// Update the order of the target subtask
+	_, err = tx.Exec("UPDATE sub_tasks SET \"order\" = $1 WHERE id = $2", newOrder, subTaskID)
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit()
 }

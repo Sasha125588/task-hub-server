@@ -26,6 +26,7 @@ type SubTask struct {
 	Title       string     `json:"title" db:"title"`
 	Description *string    `json:"description,omitempty" db:"description"`
 	Status      TaskStatus `json:"status" db:"status"`
+	Order       int        `json:"order" db:"order"`
 	CreatedAt   time.Time  `json:"created_at" db:"created_at"`
 	UpdatedAt   time.Time  `json:"updated_at" db:"updated_at"`
 }

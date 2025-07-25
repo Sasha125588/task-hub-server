@@ -281,3 +281,27 @@ func (h *TaskHandler) DeleteSubTask(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"message": "SubTask deleted successfully"})
 }
+
+type ReorderSubTaskRequest struct {
+	NewOrder int `json:"new_order" binding:"required"`
+}
+
+// ReorderSubTask handles reordering of subtasks
+func (h *TaskHandler) ReorderSubTask(c *gin.Context) {
+	taskID := c.Param("task_id")
+	subTaskID := c.Param("subtask_id")
+
+	var req ReorderSubTaskRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: err.Error()})
+		return
+	}
+
+	err := h.taskService.ReorderSubTask(taskID, subTaskID, req.NewOrder)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, models.MessageResponse{Message: "Subtask reordered successfully"})
+}

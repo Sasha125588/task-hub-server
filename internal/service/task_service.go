@@ -102,3 +102,17 @@ func (s *TaskService) DeleteSubTask(id string) error {
 func (s *TaskService) GetSubTasksByTaskID(taskID string) ([]models.SubTask, error) {
 	return s.subTaskRepo.GetSubTasksByTaskID(taskID)
 }
+
+// ReorderSubTask reorders a subtask within its parent task
+func (s *TaskService) ReorderSubTask(taskID string, subTaskID string, newOrder int) error {
+	// Verify that the subtask belongs to the task
+	subTask, err := s.subTaskRepo.GetSubTaskByID(subTaskID)
+	if err != nil {
+		return err
+	}
+	if subTask.TaskID != taskID {
+		return fmt.Errorf("subtask does not belong to the specified task")
+	}
+
+	return s.subTaskRepo.ReorderSubTask(taskID, subTaskID, newOrder)
+}

@@ -60,12 +60,9 @@ func setupRoutes(router *gin.Engine, taskHandler *handlers.TaskHandler) {
 
 			tasks.POST("/:id/subtasks", taskHandler.CreateSubTask)
 			tasks.GET("/:id/subtasks", taskHandler.GetSubTasksByTaskID)
-		}
-
-		subtasks := v1.Group("/subtasks")
-		{
-			subtasks.PUT("/:id", taskHandler.UpdateSubTask)
-			subtasks.DELETE("/:id", taskHandler.DeleteSubTask)
+			tasks.POST("/:id/subtasks/:subtask_id/reorder", taskHandler.ReorderSubTask)
+			tasks.PUT("/:id/subtasks/:subtask_id", taskHandler.UpdateSubTask)
+			tasks.DELETE("/:id/subtasks/:subtask_id", taskHandler.DeleteSubTask)
 		}
 	}
 }
