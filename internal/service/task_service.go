@@ -7,11 +7,13 @@ import (
 	"github.com/Sasha125588/event_app/internal/repository"
 )
 
+// TaskService handles business logic for tasks and subtasks
 type TaskService struct {
 	taskRepo    *repository.TaskRepository
 	subTaskRepo *repository.SubTaskRepository
 }
 
+// NewTaskService creates a new instance of TaskService
 func NewTaskService(taskRepo *repository.TaskRepository, subTaskRepo *repository.SubTaskRepository) *TaskService {
 	return &TaskService{
 		taskRepo:    taskRepo,
@@ -61,6 +63,8 @@ func (s *TaskService) GetTasks(filters models.TaskFilters) ([]models.Task, error
 	return s.taskRepo.GetTasks(filters)
 }
 
+// CreateSubTask creates a new subtask for a specific task
+// It validates that the parent task exists before creating the subtask
 func (s *TaskService) CreateSubTask(taskID string, req models.CreateSubTaskRequest) (*models.SubTask, error) {
 	_, err := s.taskRepo.GetTaskByID(taskID)
 	if err != nil {
@@ -76,6 +80,8 @@ func (s *TaskService) CreateSubTask(taskID string, req models.CreateSubTaskReque
 	return s.subTaskRepo.GetSubTaskByID(subTask.ID)
 }
 
+// UpdateSubTask updates an existing subtask
+// It validates that the subtask exists before updating it
 func (s *TaskService) UpdateSubTask(id string, req models.UpdateSubTaskRequest) (*models.SubTask, error) {
 	_, err := s.subTaskRepo.GetSubTaskByID(id)
 	if err != nil {
@@ -90,6 +96,8 @@ func (s *TaskService) UpdateSubTask(id string, req models.UpdateSubTaskRequest) 
 	return s.subTaskRepo.GetSubTaskByID(id)
 }
 
+// DeleteSubTask removes a subtask from the database
+// It validates that the subtask exists before deleting it
 func (s *TaskService) DeleteSubTask(id string) error {
 	_, err := s.subTaskRepo.GetSubTaskByID(id)
 	if err != nil {
@@ -99,11 +107,13 @@ func (s *TaskService) DeleteSubTask(id string) error {
 	return s.subTaskRepo.DeleteSubTask(id)
 }
 
+// GetSubTasksByTaskID retrieves all subtasks for a specific task
 func (s *TaskService) GetSubTasksByTaskID(taskID string) ([]models.SubTask, error) {
 	return s.subTaskRepo.GetSubTasksByTaskID(taskID)
 }
 
 // ReorderSubTask reorders a subtask within its parent task
+// It validates that the subtask belongs to the specified task before reordering
 func (s *TaskService) ReorderSubTask(taskID string, subTaskID string, newOrder int) error {
 	// Verify that the subtask belongs to the task
 	subTask, err := s.subTaskRepo.GetSubTaskByID(subTaskID)

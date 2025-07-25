@@ -1,12 +1,26 @@
 basePath: /api/v1
 definitions:
+  handlers.ReorderSubTaskRequest:
+    description: Request body for reordering a subtask within its parent task
+    properties:
+      new_order:
+        example: 3
+        type: integer
+    required:
+    - new_order
+    type: object
   models.CreateSubTaskRequest:
+    description: Request body for creating a new subtask
     properties:
       description:
+        example: Add JWT token authentication
         type: string
       status:
-        $ref: '#/definitions/models.TaskStatus'
+        allOf:
+        - $ref: '#/definitions/models.TaskStatus'
+        example: not-started
       title:
+        example: Implement user authentication
         type: string
     required:
     - status
@@ -49,23 +63,36 @@ definitions:
         type: string
     type: object
   models.SubTask:
+    description: A subtask that belongs to a parent task
     properties:
       created_at:
+        example: "2024-01-01T00:00:00Z"
         type: string
       description:
+        example: Add JWT token authentication
         type: string
       id:
+        example: 123e4567-e89b-12d3-a456-426614174000
         type: string
+      order:
+        example: 1
+        type: integer
       status:
-        $ref: '#/definitions/models.TaskStatus'
+        allOf:
+        - $ref: '#/definitions/models.TaskStatus'
+        example: not-started
       task_id:
+        example: 123e4567-e89b-12d3-a456-426614174001
         type: string
       title:
+        example: Implement user authentication
         type: string
       updated_at:
+        example: "2024-01-01T00:00:00Z"
         type: string
     type: object
   models.SubTasksResponse:
+    description: Response body containing a list of subtasks
     properties:
       subtasks:
         items:
@@ -127,12 +154,17 @@ definitions:
         type: array
     type: object
   models.UpdateSubTaskRequest:
+    description: Request body for updating an existing subtask
     properties:
       description:
+        example: Add JWT token authentication
         type: string
       status:
-        $ref: '#/definitions/models.TaskStatus'
+        allOf:
+        - $ref: '#/definitions/models.TaskStatus'
+        example: in-progress
       title:
+        example: Implement user authentication
         type: string
     type: object
   models.UpdateTaskRequest:
@@ -184,73 +216,6 @@ info:
   title: Task Hub API
   version: "1.0"
 paths:
-  /subtasks/{id}:
-    delete:
-      consumes:
-      - application/json
-      description: Delete an existing subtask
-      parameters:
-      - description: Subtask ID
-        in: path
-        name: id
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/models.MessageResponse'
-        "404":
-          description: Not Found
-          schema:
-            $ref: '#/definitions/models.ErrorResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/models.ErrorResponse'
-      summary: Delete a subtask
-      tags:
-      - subtasks
-    put:
-      consumes:
-      - application/json
-      description: Update an existing subtask's details
-      parameters:
-      - description: Subtask ID
-        in: path
-        name: id
-        required: true
-        type: string
-      - description: Updated subtask details
-        in: body
-        name: subtask
-        required: true
-        schema:
-          $ref: '#/definitions/models.UpdateSubTaskRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/models.SubTask'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/models.ErrorResponse'
-        "404":
-          description: Not Found
-          schema:
-            $ref: '#/definitions/models.ErrorResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/models.ErrorResponse'
-      summary: Update a subtask
-      tags:
-      - subtasks
   /tasks:
     get:
       consumes:
@@ -472,6 +437,124 @@ paths:
           schema:
             $ref: '#/definitions/models.ErrorResponse'
       summary: Create a subtask
+      tags:
+      - subtasks
+  /tasks/{id}/subtasks/{subtask_id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete an existing subtask
+      parameters:
+      - description: Task ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Subtask ID
+        in: path
+        name: subtask_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.MessageResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Delete a subtask
+      tags:
+      - subtasks
+    put:
+      consumes:
+      - application/json
+      description: Update an existing subtask's details
+      parameters:
+      - description: Task ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Subtask ID
+        in: path
+        name: subtask_id
+        required: true
+        type: string
+      - description: Updated subtask details
+        in: body
+        name: subtask
+        required: true
+        schema:
+          $ref: '#/definitions/models.UpdateSubTaskRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.SubTask'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Update a subtask
+      tags:
+      - subtasks
+  /tasks/{task_id}/subtasks/{subtask_id}/reorder:
+    post:
+      consumes:
+      - application/json
+      description: Reorder a subtask within its parent task by changing its order
+        position
+      parameters:
+      - description: Task ID
+        in: path
+        name: task_id
+        required: true
+        type: string
+      - description: Subtask ID
+        in: path
+        name: subtask_id
+        required: true
+        type: string
+      - description: Reorder request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.ReorderSubTaskRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.MessageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Reorder a subtask
       tags:
       - subtasks
 swagger: "2.0"

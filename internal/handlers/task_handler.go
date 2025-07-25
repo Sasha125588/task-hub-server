@@ -220,21 +220,23 @@ func (h *TaskHandler) GetSubTasksByTaskID(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"subtasks": subTasks})
 }
 
-// UpdateSubTask handles PUT /api/v1/subtasks/:id
+// UpdateSubTask handles PUT /api/v1/tasks/:id/subtasks/:subtask_id
 // @Summary Update a subtask
 // @Description Update an existing subtask's details
 // @Tags subtasks
 // @Accept json
 // @Produce json
-// @Param id path string true "Subtask ID"
+// @Param id path string true "Task ID"
+// @Param subtask_id path string true "Subtask ID"
 // @Param subtask body models.UpdateSubTaskRequest true "Updated subtask details"
 // @Success 200 {object} models.SubTask
 // @Failure 400 {object} models.ErrorResponse
 // @Failure 404 {object} models.ErrorResponse
 // @Failure 500 {object} models.ErrorResponse
-// @Router /subtasks/{id} [put]
+// @Router /tasks/{id}/subtasks/{subtask_id} [put]
 func (h *TaskHandler) UpdateSubTask(c *gin.Context) {
-	id := c.Param("id")
+	taskID := c.Param("id")
+	subtaskID := c.Param("subtask_id")
 
 	var req models.UpdateSubTaskRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -242,7 +244,26 @@ func (h *TaskHandler) UpdateSubTask(c *gin.Context) {
 		return
 	}
 
-	subTask, err := h.taskService.UpdateSubTask(id, req)
+	// Verify that the subtask belongs to the task
+	subTask, err := h.taskService.GetSubTasksByTaskID(taskID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	found := false
+	for _, st := range subTask {
+		if st.ID == subtaskID {
+			found = true
+			break
+		}
+	}
+	if !found {
+		c.JSON(http.StatusNotFound, gin.H{"error": "SubTask not found in the specified task"})
+		return
+	}
+
+	updatedSubTask, err := h.taskService.UpdateSubTask(subtaskID, req)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			c.JSON(http.StatusNotFound, gin.H{"error": "SubTask not found"})
@@ -252,24 +273,45 @@ func (h *TaskHandler) UpdateSubTask(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, subTask)
+	c.JSON(http.StatusOK, updatedSubTask)
 }
 
-// DeleteSubTask handles DELETE /api/v1/subtasks/:id
+// DeleteSubTask handles DELETE /api/v1/tasks/:id/subtasks/:subtask_id
 // @Summary Delete a subtask
 // @Description Delete an existing subtask
 // @Tags subtasks
 // @Accept json
 // @Produce json
-// @Param id path string true "Subtask ID"
+// @Param id path string true "Task ID"
+// @Param subtask_id path string true "Subtask ID"
 // @Success 200 {object} models.MessageResponse
 // @Failure 404 {object} models.ErrorResponse
 // @Failure 500 {object} models.ErrorResponse
-// @Router /subtasks/{id} [delete]
+// @Router /tasks/{id}/subtasks/{subtask_id} [delete]
 func (h *TaskHandler) DeleteSubTask(c *gin.Context) {
-	id := c.Param("id")
+	taskID := c.Param("id")
+	subtaskID := c.Param("subtask_id")
 
-	err := h.taskService.DeleteSubTask(id)
+	// Verify that the subtask belongs to the task
+	subTasks, err := h.taskService.GetSubTasksByTaskID(taskID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	found := false
+	for _, st := range subTasks {
+		if st.ID == subtaskID {
+			found = true
+			break
+		}
+	}
+	if !found {
+		c.JSON(http.StatusNotFound, gin.H{"error": "SubTask not found in the specified task"})
+		return
+	}
+
+	err = h.taskService.DeleteSubTask(subtaskID)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			c.JSON(http.StatusNotFound, gin.H{"error": "SubTask not found"})
@@ -282,11 +324,25 @@ func (h *TaskHandler) DeleteSubTask(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "SubTask deleted successfully"})
 }
 
+// ReorderSubTaskRequest represents the request body for reordering a subtask
+// @Description Request body for reordering a subtask within its parent task
 type ReorderSubTaskRequest struct {
-	NewOrder int `json:"new_order" binding:"required"`
+	NewOrder int `json:"new_order" binding:"required" example:"3"`
 }
 
-// ReorderSubTask handles reordering of subtasks
+// ReorderSubTask handles POST /api/v1/tasks/:task_id/subtasks/:subtask_id/reorder
+// @Summary Reorder a subtask
+// @Description Reorder a subtask within its parent task by changing its order position
+// @Tags subtasks
+// @Accept json
+// @Produce json
+// @Param task_id path string true "Task ID"
+// @Param subtask_id path string true "Subtask ID"
+// @Param request body ReorderSubTaskRequest true "Reorder request"
+// @Success 200 {object} models.MessageResponse
+// @Failure 400 {object} models.ErrorResponse
+// @Failure 500 {object} models.ErrorResponse
+// @Router /tasks/{task_id}/subtasks/{subtask_id}/reorder [post]
 func (h *TaskHandler) ReorderSubTask(c *gin.Context) {
 	taskID := c.Param("task_id")
 	subTaskID := c.Param("subtask_id")

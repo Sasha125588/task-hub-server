@@ -20,15 +20,17 @@ type User struct {
 	Src  string `json:"src" db:"src" example:"https://avatars.githubusercontent.com/u/124599?v=4"`
 }
 
+// SubTask represents a subtask within a task
+// @Description A subtask that belongs to a parent task
 type SubTask struct {
-	ID          string     `json:"id" db:"id"`
-	TaskID      string     `json:"task_id" db:"task_id"`
-	Title       string     `json:"title" db:"title"`
-	Description *string    `json:"description,omitempty" db:"description"`
-	Status      TaskStatus `json:"status" db:"status"`
-	Order       int        `json:"order" db:"order"`
-	CreatedAt   time.Time  `json:"created_at" db:"created_at"`
-	UpdatedAt   time.Time  `json:"updated_at" db:"updated_at"`
+	ID          string     `json:"id" db:"id" example:"123e4567-e89b-12d3-a456-426614174000"`
+	TaskID      string     `json:"task_id" db:"task_id" example:"123e4567-e89b-12d3-a456-426614174001"`
+	Title       string     `json:"title" db:"title" example:"Implement user authentication"`
+	Description *string    `json:"description,omitempty" db:"description" example:"Add JWT token authentication"`
+	Status      TaskStatus `json:"status" db:"status" example:"not-started"`
+	Order       int        `json:"order" db:"order" example:"1"`
+	CreatedAt   time.Time  `json:"created_at" db:"created_at" example:"2024-01-01T00:00:00Z"`
+	UpdatedAt   time.Time  `json:"updated_at" db:"updated_at" example:"2024-01-01T00:00:00Z"`
 }
 
 type Task struct {
@@ -73,16 +75,20 @@ type UpdateTaskRequest struct {
 	Links       *int        `json:"links,omitempty"`
 }
 
+// CreateSubTaskRequest represents the request body for creating a new subtask
+// @Description Request body for creating a new subtask
 type CreateSubTaskRequest struct {
-	Title       string     `json:"title" binding:"required"`
-	Description *string    `json:"description,omitempty"`
-	Status      TaskStatus `json:"status" binding:"required"`
+	Title       string     `json:"title" binding:"required" example:"Implement user authentication"`
+	Description *string    `json:"description,omitempty" example:"Add JWT token authentication"`
+	Status      TaskStatus `json:"status" binding:"required" example:"not-started"`
 }
 
+// UpdateSubTaskRequest represents the request body for updating an existing subtask
+// @Description Request body for updating an existing subtask
 type UpdateSubTaskRequest struct {
-	Title       *string     `json:"title,omitempty"`
-	Description *string     `json:"description,omitempty"`
-	Status      *TaskStatus `json:"status,omitempty"`
+	Title       *string     `json:"title,omitempty" example:"Implement user authentication"`
+	Description *string     `json:"description,omitempty" example:"Add JWT token authentication"`
+	Status      *TaskStatus `json:"status,omitempty" example:"in-progress"`
 }
 
 type TaskFilters struct {

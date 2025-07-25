@@ -12,6 +12,8 @@ type TasksResponse struct {
 	Tasks []Task `json:"tasks"`
 }
 
+// SubTasksResponse represents the response body for getting subtasks
+// @Description Response body containing a list of subtasks
 type SubTasksResponse struct {
 	SubTasks []SubTask `json:"subtasks"`
 }

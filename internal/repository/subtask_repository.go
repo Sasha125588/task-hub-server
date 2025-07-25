@@ -9,14 +9,18 @@ import (
 	"github.com/Sasha125588/event_app/internal/models"
 )
 
+// SubTaskRepository handles database operations for subtasks
 type SubTaskRepository struct {
 	db *sql.DB
 }
 
+// NewSubTaskRepository creates a new instance of SubTaskRepository
 func NewSubTaskRepository(db *sql.DB) *SubTaskRepository {
 	return &SubTaskRepository{db: db}
 }
 
+// CreateSubTask creates a new subtask in the database
+// The order is automatically set to be the last in the task's subtask list
 func (r *SubTaskRepository) CreateSubTask(subTask *models.SubTask) error {
 	// Get the maximum order for the task
 	var maxOrder int
@@ -46,6 +50,7 @@ func (r *SubTaskRepository) CreateSubTask(subTask *models.SubTask) error {
 	).Scan(&subTask.ID)
 }
 
+// GetSubTaskByID retrieves a subtask by its ID
 func (r *SubTaskRepository) GetSubTaskByID(id string) (*models.SubTask, error) {
 	query := `
 		SELECT id, task_id, title, description, status, "order", created_at, updated_at
@@ -72,6 +77,7 @@ func (r *SubTaskRepository) GetSubTaskByID(id string) (*models.SubTask, error) {
 	return subTask, nil
 }
 
+// UpdateSubTask updates an existing subtask with the provided changes
 func (r *SubTaskRepository) UpdateSubTask(id string, updates *models.UpdateSubTaskRequest) error {
 	setParts := []string{}
 	args := []interface{}{}
@@ -108,12 +114,14 @@ func (r *SubTaskRepository) UpdateSubTask(id string, updates *models.UpdateSubTa
 	return err
 }
 
+// DeleteSubTask removes a subtask from the database
 func (r *SubTaskRepository) DeleteSubTask(id string) error {
 	query := "DELETE FROM sub_tasks WHERE id = $1"
 	_, err := r.db.Exec(query, id)
 	return err
 }
 
+// GetSubTasksByTaskID retrieves all subtasks for a specific task, ordered by their order field
 func (r *SubTaskRepository) GetSubTasksByTaskID(taskID string) ([]models.SubTask, error) {
 	query := `
 		SELECT id, task_id, title, description, status, "order", created_at, updated_at
@@ -150,6 +158,7 @@ func (r *SubTaskRepository) GetSubTasksByTaskID(taskID string) ([]models.SubTask
 }
 
 // ReorderSubTask updates the order of a subtask and adjusts other subtasks' orders accordingly
+// This method uses a transaction to ensure data consistency during reordering
 func (r *SubTaskRepository) ReorderSubTask(taskID string, subTaskID string, newOrder int) error {
 	tx, err := r.db.Begin()
 	if err != nil {
