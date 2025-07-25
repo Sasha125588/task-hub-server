@@ -56,6 +56,8 @@ func (r *SubTaskRepository) GetSubTaskByID(id string) (*models.SubTask, error) {
 		SELECT id, task_id, title, description, status, "order", created_at, updated_at
 		FROM sub_tasks WHERE id = $1
 	`
+	fmt.Printf("GetSubTaskByID query: %s with id: %s\n", query, id)
+
 	subTask := &models.SubTask{}
 	row := r.db.QueryRow(query, id)
 
@@ -71,9 +73,11 @@ func (r *SubTaskRepository) GetSubTaskByID(id string) (*models.SubTask, error) {
 	)
 
 	if err != nil {
+		fmt.Printf("GetSubTaskByID error: %v\n", err)
 		return nil, err
 	}
 
+	fmt.Printf("GetSubTaskByID result: %+v\n", subTask)
 	return subTask, nil
 }
 
@@ -158,51 +162,63 @@ func (r *SubTaskRepository) GetSubTasksByTaskID(taskID string) ([]models.SubTask
 }
 
 // ReorderSubTask updates the order of a subtask and adjusts other subtasks' orders accordingly
-// This method uses a transaction to ensure data consistency during reordering
 func (r *SubTaskRepository) ReorderSubTask(taskID string, subTaskID string, newOrder int) error {
+	fmt.Printf("ReorderSubTask called with taskID: %s, subTaskID: %s, newOrder: %d\n", taskID, subTaskID, newOrder)
+
 	tx, err := r.db.Begin()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
 	defer tx.Rollback()
 
 	// Get current order of the subtask
 	var currentOrder int
-	err = tx.QueryRow("SELECT \"order\" FROM sub_tasks WHERE id = $1 AND task_id = $2", subTaskID, taskID).Scan(&currentOrder)
+	err = tx.QueryRow("SELECT \"order\" FROM sub_tasks WHERE id = $1", subTaskID).Scan(&currentOrder)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to get current order: %w", err)
+	}
+
+	// Временно установим очень большой order для нашего элемента, чтобы освободить текущую позицию
+	_, err = tx.Exec("UPDATE sub_tasks SET \"order\" = -1 WHERE id = $1", subTaskID)
+	if err != nil {
+		return fmt.Errorf("failed to set temporary order: %w", err)
 	}
 
 	if currentOrder < newOrder {
-		// Moving down: decrease order of tasks between current and new position
+		// Сдвигаем элементы вверх
 		_, err = tx.Exec(`
-			UPDATE sub_tasks 
-			SET "order" = "order" - 1 
-			WHERE task_id = $1 
-			AND "order" > $2 
-			AND "order" <= $3
-			AND id != $4`,
+            UPDATE sub_tasks 
+            SET "order" = "order" - 1 
+            WHERE task_id = $1 
+            AND "order" > $2 
+            AND "order" <= $3
+            AND id != $4`,
 			taskID, currentOrder, newOrder, subTaskID)
 	} else {
-		// Moving up: increase order of tasks between new and current position
+		// Сдвигаем элементы вниз
 		_, err = tx.Exec(`
-			UPDATE sub_tasks 
-			SET "order" = "order" + 1 
-			WHERE task_id = $1 
-			AND "order" >= $2 
-			AND "order" < $3
-			AND id != $4`,
+            UPDATE sub_tasks 
+            SET "order" = "order" + 1 
+            WHERE task_id = $1 
+            AND "order" >= $2 
+            AND "order" < $3
+            AND id != $4`,
 			taskID, newOrder, currentOrder, subTaskID)
 	}
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to update other tasks order: %w", err)
 	}
 
-	// Update the order of the target subtask
+	// Устанавливаем финальный порядок для нашего элемента
 	_, err = tx.Exec("UPDATE sub_tasks SET \"order\" = $1 WHERE id = $2", newOrder, subTaskID)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to set final order: %w", err)
 	}
 
-	return tx.Commit()
+	err = tx.Commit()
+	if err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	return nil
 }

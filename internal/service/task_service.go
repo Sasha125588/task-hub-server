@@ -1,6 +1,7 @@
 package service
 
 import (
+	"database/sql"
 	"fmt"
 
 	"github.com/Sasha125588/event_app/internal/models"
@@ -115,13 +116,36 @@ func (s *TaskService) GetSubTasksByTaskID(taskID string) ([]models.SubTask, erro
 // ReorderSubTask reorders a subtask within its parent task
 // It validates that the subtask belongs to the specified task before reordering
 func (s *TaskService) ReorderSubTask(taskID string, subTaskID string, newOrder int) error {
-	// Verify that the subtask belongs to the task
+	// Verify that the task exists
+	_, err := s.taskRepo.GetTaskByID(taskID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return fmt.Errorf("task not found")
+		}
+		return err
+	}
+
+	// Verify that the subtask exists and belongs to the task
 	subTask, err := s.subTaskRepo.GetSubTaskByID(subTaskID)
 	if err != nil {
+		if err == sql.ErrNoRows {
+			return err
+		}
 		return err
 	}
 	if subTask.TaskID != taskID {
 		return fmt.Errorf("subtask does not belong to the specified task")
+	}
+
+	// Get all subtasks to validate the new order
+	subtasks, err := s.subTaskRepo.GetSubTasksByTaskID(taskID)
+	if err != nil {
+		return err
+	}
+
+	// Validate that the new order is within bounds
+	if newOrder < 0 || newOrder >= len(subtasks) {
+		return fmt.Errorf("invalid order: must be between 0 and %d", len(subtasks)-1)
 	}
 
 	return s.subTaskRepo.ReorderSubTask(taskID, subTaskID, newOrder)

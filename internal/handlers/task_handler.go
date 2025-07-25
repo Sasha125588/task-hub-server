@@ -2,6 +2,12 @@ package handlers
 
 import (
 	"database/sql"
+	"fmt"
+	"io"
+	"strings"
+
+	"bytes"
+
 	"net/http"
 
 	"github.com/Sasha125588/event_app/internal/models"
@@ -327,37 +333,73 @@ func (h *TaskHandler) DeleteSubTask(c *gin.Context) {
 // ReorderSubTaskRequest represents the request body for reordering a subtask
 // @Description Request body for reordering a subtask within its parent task
 type ReorderSubTaskRequest struct {
-	NewOrder int `json:"new_order" binding:"required" example:"3"`
+	NewOrder int `json:"new_order" binding:"required,min=0" example:"3"`
 }
 
-// ReorderSubTask handles POST /api/v1/tasks/:task_id/subtasks/:subtask_id/reorder
+// ReorderSubTask handles POST /api/v1/tasks/:id/subtasks/:subtask_id/reorder
 // @Summary Reorder a subtask
 // @Description Reorder a subtask within its parent task by changing its order position
 // @Tags subtasks
 // @Accept json
 // @Produce json
-// @Param task_id path string true "Task ID"
+// @Param id path string true "Task ID"
 // @Param subtask_id path string true "Subtask ID"
 // @Param request body ReorderSubTaskRequest true "Reorder request"
 // @Success 200 {object} models.MessageResponse
-// @Failure 400 {object} models.ErrorResponse
-// @Failure 500 {object} models.ErrorResponse
-// @Router /tasks/{task_id}/subtasks/{subtask_id}/reorder [post]
+// @Failure 400 {object} models.ErrorResponse "Invalid request body or order out of bounds"
+// @Failure 404 {object} models.ErrorResponse "Task or subtask not found, or subtask does not belong to task"
+// @Failure 500 {object} models.ErrorResponse "Internal server error"
+// @Router /tasks/{id}/subtasks/{subtask_id}/reorder [post]
 func (h *TaskHandler) ReorderSubTask(c *gin.Context) {
-	taskID := c.Param("task_id")
+	taskID := c.Param("id")
 	subTaskID := c.Param("subtask_id")
+
+	fmt.Printf("ReorderSubTask request received - taskID: %s, subTaskID: %s\n", taskID, subTaskID)
+
+	// Логируем тело запроса
+	body, err := io.ReadAll(c.Request.Body)
+	if err != nil {
+		fmt.Printf("Error reading request body: %v\n", err)
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "Failed to read request body"})
+		return
+	}
+	// Восстанавливаем тело запроса для последующего использования
+	c.Request.Body = io.NopCloser(bytes.NewBuffer(body))
+	fmt.Printf("Request body: %s\n", string(body))
 
 	var req ReorderSubTaskRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: err.Error()})
+		fmt.Printf("Error binding JSON: %v\n", err)
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: fmt.Sprintf("Invalid request: %v", err)})
 		return
 	}
 
-	err := h.taskService.ReorderSubTask(taskID, subTaskID, req.NewOrder)
+	fmt.Printf("Parsed request: %+v\n", req)
+
+	err = h.taskService.ReorderSubTask(taskID, subTaskID, req.NewOrder)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: err.Error()})
-		return
+		fmt.Printf("Error in ReorderSubTask service: %v\n", err)
+		switch err.Error() {
+		case "subtask does not belong to the specified task":
+			c.JSON(http.StatusNotFound, models.ErrorResponse{Error: err.Error()})
+			return
+		case "task not found":
+			c.JSON(http.StatusNotFound, models.ErrorResponse{Error: err.Error()})
+			return
+		default:
+			if err == sql.ErrNoRows {
+				c.JSON(http.StatusNotFound, models.ErrorResponse{Error: "SubTask not found"})
+				return
+			}
+			if strings.HasPrefix(err.Error(), "invalid order:") {
+				c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: err.Error()})
+				return
+			}
+			c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: err.Error()})
+			return
+		}
 	}
 
+	fmt.Printf("ReorderSubTask completed successfully\n")
 	c.JSON(http.StatusOK, models.MessageResponse{Message: "Subtask reordered successfully"})
 }

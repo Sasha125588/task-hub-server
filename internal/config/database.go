@@ -93,12 +93,16 @@ func CreateTables(db *sql.DB) error {
 			title VARCHAR(255) NOT NULL,
 			description TEXT,
 			status VARCHAR(50) NOT NULL CHECK (status IN ('not-started', 'completed', 'in-progress')),
+			"order" INTEGER NOT NULL DEFAULT 0,
 			created_at TIMESTAMP DEFAULT NOW(),
-			updated_at TIMESTAMP DEFAULT NOW()
+			updated_at TIMESTAMP DEFAULT NOW(),
+			UNIQUE(task_id, "order")
 		)`,
 		`CREATE INDEX IF NOT EXISTS idx_tasks_due_date ON tasks(due_date)`,
 		`CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status)`,
 		`CREATE INDEX IF NOT EXISTS idx_sub_tasks_task_id ON sub_tasks(task_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_sub_tasks_order ON sub_tasks("order")`,
+		`CREATE INDEX IF NOT EXISTS idx_sub_tasks_task_order ON sub_tasks(task_id, "order")`,
 	}
 
 	for _, query := range queries {

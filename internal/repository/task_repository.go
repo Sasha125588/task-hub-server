@@ -33,25 +33,32 @@ func (r *TaskRepository) GetTaskByID(id string) (*models.Task, error) {
 		SELECT id, title, icon_name, start_time, end_time, due_date, progress, status, comments, attachments, links, created_at, updated_at
 		FROM tasks WHERE id = $1
 	`
-	task := &models.Task{}
-	row := r.db.QueryRow(query, id)
+	fmt.Printf("GetTaskByID query: %s with id: %s\n", query, id)
 
-	err := row.Scan(
+	task := &models.Task{}
+	err := r.db.QueryRow(query, id).Scan(
 		&task.ID, &task.Title, &task.IconName, &task.StartTime, &task.EndTime,
 		&task.DueDate, &task.Progress, &task.Status, &task.Comments, &task.Attachments,
 		&task.Links, &task.CreatedAt, &task.UpdatedAt,
 	)
 
 	if err != nil {
+		if err == sql.ErrNoRows {
+			fmt.Printf("GetTaskByID: task not found with id: %s\n", id)
+			return nil, sql.ErrNoRows
+		}
+		fmt.Printf("GetTaskByID error: %v\n", err)
 		return nil, err
 	}
 
 	subTasks, err := r.GetTaskSubTasks(id)
 	if err != nil {
+		fmt.Printf("GetTaskSubTasks error: %v\n", err)
 		return nil, err
 	}
 	task.SubTasks = subTasks
 
+	fmt.Printf("GetTaskByID success: found task with id: %s\n", id)
 	return task, nil
 }
 
